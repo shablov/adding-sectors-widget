@@ -100,6 +100,7 @@ bool SectorsModel::setData(const QModelIndex &index, const QVariant &value, int 
 			default: return false;
 		}
 	}
+	sector.normalize();
 	emit dataChanged(index, index);
 	return true;
 }
@@ -163,7 +164,7 @@ bool SectorsModel::insertRows(int row, int count, const QModelIndex &parent)
 		Sector sector;
 		sector.id = idQueueSectors++;
 
-		mSectors.insert(i, sector);
+		mSectors.append(sector);
 	}
 	endInsertRows();
 	QAbstractItemModel::reset();
@@ -202,8 +203,16 @@ void SectorsModel::uniteSectors(Sector &first, QList<Sector> intersectedSectors)
 	}
 	first.id = firstId;
 	int indexFirstSector = mSectors.indexOf(first);
+	if (indexFirstSector == -1)
+	{
+		insertRow(-1);
+		indexFirstSector = mSectors.indexOf(mSectors.last());
+		first.id = mSectors.last().id;
+	}
+	first.normalize();
 	mSectors.replace(indexFirstSector, first);
-	reset();
+	QAbstractTableModel::reset();
+	emit dataChanged(QModelIndex(), QModelIndex());
 }
 
 void SectorsModel::appendSector(const Sector &sector)
@@ -212,7 +221,11 @@ void SectorsModel::appendSector(const Sector &sector)
 	if (intersectedSectors.isEmpty())
 	{
 		insertRow(-1);
-		mSectors.replace(mSectors.count(), sector);
+		Sector &last = mSectors.last();
+		last.begin = sector.begin;
+		last.end = sector.end;
+		last.normalize();
+		emit dataChanged(QModelIndex(), QModelIndex());
 		return;
 	}
 	emit sectorIntersected(sector, intersectedSectors);
@@ -237,9 +250,23 @@ Sector::Sector(const Sector &sector)
 	id = sector.id;
 }
 
+void Sector::normalize()
+{
+	qint32 tmpBegin = begin * 100;
+	qint32 tmpEnd = end * 100;
+
+	begin = static_cast<qreal>(tmpBegin) / 100;
+	end = static_cast<qreal>(tmpEnd) / 100;
+}
+
 bool Sector::isEmpty()
 {
 	return id == -1;
+}
+
+bool Sector::isValid()
+{
+	return begin != end;
 }
 
 bool Sector::intersects(const Sector &sector) const
@@ -283,10 +310,10 @@ Sector Sector::united(const Sector &sector)
 	{
 		if (sector.end >= begin)
 		{
-			resultingSector.end = qMin(sector.end, begin);
+			resultingSector.end = qMax(sector.end, end);
 			resultingSector.begin = sector.begin;
 		}
-		if (sector.begin <= end)
+		else if (sector.begin <= end)
 		{
 			resultingSector.begin = qMin(begin, sector.begin);
 			resultingSector.end = sector.end;
@@ -308,7 +335,7 @@ Sector Sector::united(const Sector &sector)
 			resultingSector.end = qMin(sector.end, begin);
 			resultingSector.begin = begin;
 		}
-		if (begin <= sector.end)
+		else if (begin <= sector.end)
 		{
 			resultingSector.begin = qMin(begin, sector.begin);
 			resultingSector.end = end;

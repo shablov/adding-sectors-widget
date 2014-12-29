@@ -4,8 +4,14 @@
 #include <QGraphicsView>
 #include <QGraphicsTextItem>
 #include <QVBoxLayout>
+#include <QMenu>
+
+#include <QEvent>
+#include <QGraphicsSceneMouseEvent>
 
 #include <math.h>
+
+#include <QDebug>
 
 
 GraphicsSectorsWidget::GraphicsSectorsWidget(QWidget *parent)
@@ -20,12 +26,9 @@ GraphicsSectorsWidget::GraphicsSectorsWidget(QWidget *parent)
 
 void GraphicsSectorsWidget::setDefaultSettings()
 {
-
 	sectorsBrush = QBrush(Qt::red);
 	sectorsPen = QPen();
-
 	backgroundBrush = QBrush(Qt::white);
-
 	circleBrush = QBrush(Qt::white);
 	scalePen = QPen(Qt::black, 2);
 
@@ -56,13 +59,96 @@ void GraphicsSectorsWidget::createGraphicsView()
 	view->setScene(scene);
 }
 
+void GraphicsSectorsWidget::setOffset(qreal offset)
+{
+	mOffset = offset;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setDirection(bool directionCW)
+{
+	mCCW = directionCW ? -1 : 1;
+	mOffset *= mCCW;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setScaleParameters(qreal offset, bool directionCW)
+{
+	mCCW = directionCW ? -1 : 1;
+	mOffset = offset;
+	mOffset *= mCCW;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setSectorsBrush(const QBrush &brush)
+{
+	sectorsBrush = brush;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setSectorsPen(const QPen &pen)
+{
+	sectorsPen = pen;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setBackgroundBrush(const QBrush &brush)
+{
+	backgroundBrush = brush;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setCircleBrush(const QBrush &brush)
+{
+	circleBrush = brush;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setScalePen(const QPen &pen)
+{
+	scalePen = pen;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setMinimum(const qreal &min)
+{
+	minimum = min;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setMaximum(const qreal &max)
+{
+	maximum = max;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setRange(const qreal &min, const qreal &max)
+{
+	minimum = min;
+	maximum = max;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setPrefix(const QString &prefix)
+{
+	mPrefix = prefix;
+	redraw();
+}
+
+void GraphicsSectorsWidget::setSuffix(const QString &suffix)
+{
+	mSuffix = suffix;
+	redraw();
+}
+
 void GraphicsSectorsWidget::setModel(SectorsModel *model)
 {
 	pModel = model;
 	connect(pModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(onDataChanged(QModelIndex, QModelIndex)));
+	redraw();
 }
 
-void GraphicsSectorsWidget::onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
+void GraphicsSectorsWidget::onDataChanged(const QModelIndex &/*topLeft*/, const QModelIndex &/*bottomRight*/)
 {
 	redraw();
 }
@@ -74,6 +160,107 @@ void GraphicsSectorsWidget::resizeEvent(QResizeEvent *event)
 	redraw();
 }
 
+bool GraphicsSectorsWidget::eventFilter(QObject *obj, QEvent *event)
+{
+	if (event->type() == QEvent::GraphicsSceneMouseMove ||
+		event->type() == QEvent::GraphicsSceneMousePress ||
+		event->type() == QEvent::GraphicsSceneMouseRelease)
+	{
+		handleEvent(event);
+	}
+	return QWidget::eventFilter(obj, event);
+}
+
+void GraphicsSectorsWidget::handleEvent(QEvent *event)
+{
+	QGraphicsSceneMouseEvent *mouseEvent = dynamic_cast<QGraphicsSceneMouseEvent*>(event);
+	if (!mouseEvent)
+	{
+		return;
+	}
+	qreal value = calculateValue(mouseEvent->scenePos());
+	switch (mouseEvent->type())
+	{
+		case QEvent::GraphicsSceneMouseMove:
+		{
+			if (!leftButtonWasPressed())
+			{
+				break;
+			}
+			drawNewSector(value);
+			break;
+		}
+		case QEvent::GraphicsSceneMousePress:
+		{
+			buttonPressed = mouseEvent->button();
+			if (!leftButtonWasPressed())
+			{
+				break;
+			}
+			mAddedSector.begin = value;
+			mAddedSector.end = value;
+			drawNewSector(value);
+			break;
+		}
+		case QEvent::GraphicsSceneMouseRelease:
+		{
+			if (!leftButtonWasPressed())
+			{
+				break;
+			}
+			buttonPressed = Qt::NoButton;
+			saveSectorIfPossible();
+		}
+		default: break;
+	}
+}
+
+void GraphicsSectorsWidget::drawNewSector(qreal value)
+{
+	mAddedSector.end = value;
+	if (!mAddedSector.isValid())
+	{
+		return;
+	}
+	if (pAddedEllipseSector)
+	{
+		scene->removeItem(pAddedEllipseSector);
+	}
+	pAddedEllipseSector = drawSector(mAddedSector);
+}
+
+void GraphicsSectorsWidget::saveSectorIfPossible()
+{
+	if (pAddedEllipseSector)
+	{
+		scene->removeItem(pAddedEllipseSector);
+		pAddedEllipseSector = 0;
+	}
+
+	if (mAddedSector.isValid())
+	{
+		mAddedSector.normalize();
+		addSector(Sector(mAddedSector));
+	}
+	mAddedSector = Sector();
+}
+
+void GraphicsSectorsWidget::addSector(const Sector &sector)
+{
+	pModel->appendSector(sector);
+}
+
+qreal GraphicsSectorsWidget::calculateValue(const QPointF &point)
+{
+	QLineF line(drawRect.center(), point);
+	qreal angle = fmod(((line.angle() - generalOffset()) * mCCW + 720), 360);
+	return valueFromAngle(angle);
+}
+
+bool GraphicsSectorsWidget::leftButtonWasPressed()
+{
+	return buttonPressed == Qt::LeftButton;
+}
 
 void GraphicsSectorsWidget::redraw()
 {
@@ -137,15 +324,23 @@ void GraphicsSectorsWidget::drawSectors()
 	while(i.hasNext())
 	{
 		Sector sector = i.next();
-		QGraphicsEllipseItem *ellipse = scene->addEllipse(drawRect, sectorsPen, sectorsBrush);
-
-		qreal firstAngle = angleFromValue(sector.begin);
-		qreal secondAngle = angleFromValue(sector.end);
-		int startAngle = (firstAngle * mCCW + generalOffset()) * 16;
-		int spanAngle = fmod(secondAngle - firstAngle + 360, 360) * 16 * mCCW;
-		ellipse->setStartAngle(startAngle);
-		ellipse->setSpanAngle(spanAngle);
+		drawSector(sector);
 	}
+}
+
+QGraphicsEllipseItem *GraphicsSectorsWidget::drawSector(const Sector &sector)
+{
+	QGraphicsEllipseItem *ellipse = scene->addEllipse(drawRect, sectorsPen, sectorsBrush);
+	ellipse->setFlags(ellipse->flags() | QGraphicsItem::ItemIsFocusable);
+
+	qreal firstAngle = angleFromValue(sector.begin);
+	qreal secondAngle = angleFromValue(sector.end);
+	int startAngle = (firstAngle * mCCW + generalOffset()) * 16;
+	int spanAngle = fmod(secondAngle - firstAngle + 360, 360) * 16 * mCCW;
+	ellipse->setStartAngle(startAngle);
+	ellipse->setSpanAngle(spanAngle);
+
+	return ellipse;
 }
 
 qreal GraphicsSectorsWidget::range()

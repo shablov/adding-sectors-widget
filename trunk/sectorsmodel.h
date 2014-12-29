@@ -11,7 +11,9 @@ struct Sector
 	qreal end;
 	qint32 id;
 
+	void normalize();
 	bool isEmpty();
+	bool isValid();
 	bool intersects(const Sector &sector) const;
 	Sector united(const Sector &sector);
 
