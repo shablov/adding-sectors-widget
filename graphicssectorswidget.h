@@ -11,6 +11,7 @@ class SectorsModel;
 
 class QGraphicsScene;
 class QGraphicsView;
+class QGraphicsEllipseItem;
 
 class QModelIndex;
 
@@ -20,13 +21,30 @@ class GraphicsSectorsWidget : public QWidget
 public:
 	GraphicsSectorsWidget(QWidget *parent = 0);
 
+	void setOffset(qreal offset);
+	void setDirection(bool directionCW);
+	void setScaleParameters(qreal offset, bool directionCW = true);
+
+	void setSectorsBrush(const QBrush &brush);
+	void setSectorsPen(const QPen &pen);
+	void setBackgroundBrush(const QBrush &brush);
+	void setCircleBrush(const QBrush &brush);
+	void setScalePen(const QPen &pen);
+
+	void setMinimum(const qreal &min);
+	void setMaximum(const qreal &max);
+	void setRange(const qreal &min, const qreal &max);
+	void setPrefix(const QString &prefix);
+	void setSuffix(const QString &suffix);
+
 	void setModel(SectorsModel *model);
 
 protected:
 	void resizeEvent(QResizeEvent *event);
+	bool eventFilter(QObject *obj, QEvent *event);
 
 private slots:
-	void onDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
+	void onDataChanged(const QModelIndex &, const QModelIndex &);
 
 private:
 	void setDefaultSettings();
@@ -40,7 +58,18 @@ private:
 	void calculateDrawRect();
 	void drawScale();
 	void drawSectors();
+	QGraphicsEllipseItem *drawSector(const Sector &sector);
 
+	void drawNewSector(qreal value);
+	void saveSectorIfPossible();
+	void addSector(const Sector &sector);
+	Sector mAddedSector;
+	QGraphicsEllipseItem *pAddedEllipseSector;
+
+	void handleEvent(QEvent *event);
+	qreal calculateValue(const QPointF &point);
+	bool leftButtonWasPressed();
+	Qt::MouseButton buttonPressed;
 
 	QGraphicsView *view;
 	QBrush backgroundBrush;

@@ -17,10 +17,6 @@ SectorsWidget::SectorsWidget(QWidget *parent) :
 	QVBoxLayout * mainLayout = new QVBoxLayout(this);
 	tabWidget = new QTabWidget;
 	mainLayout->addWidget(tabWidget);
-	graphicsWidget = new GraphicsSectorsWidget();
-	tableWidget = new TableSectorsWidget();
-	tabWidget->addTab(graphicsWidget, tr("graphics"));
-	tabWidget->addTab(tableWidget, tr("table"));
 	setModel(new SectorsModel());
 }
 
@@ -29,16 +25,17 @@ void SectorsWidget::setModel(SectorsModel *model)
 	if (!graphicsWidget)
 	{
 		graphicsWidget = new GraphicsSectorsWidget;
+		graphicsWidget->setModel(model);
+		graphicsWidget->setSuffix(QChar(0x00B0));
 		tabWidget->addTab(graphicsWidget, tr("graphics"));
 	}
 	if (!tableWidget)
 	{
 		tableWidget = new TableSectorsWidget;
+		tableWidget->setModel(model);
 		tabWidget->addTab(tableWidget, tr("table"));
 	}
 
-	graphicsWidget->setModel(model);
-	tableWidget->setModel(model);
 	connect(model, SIGNAL(sectorIntersected(Sector, QList<Sector>)),
 			this, SLOT(onSectorIntersected(Sector, QList<Sector>)));
 }
