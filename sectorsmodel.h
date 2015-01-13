@@ -44,6 +44,10 @@ public:
 
 	void uniteSectors(Sector &first, QList<Sector> intersectedSectors);
 	void appendSector(const Sector &sector);
+	void removeSector(const Sector &sector);
+	void removeSector(const int &id);
+	Sector sector(const int &id);
+	Sector sector(const QModelIndex &index);
 	QList<Sector> sectors();
 
 signals:

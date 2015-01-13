@@ -20,8 +20,7 @@ void Tools::information(QWidget *parent, const QString &title, const QString &te
 	{
 		messageBox->setWindowModality(Qt::WindowModal);
 	}
-	messageBox->setWindowTitle(QString("%1 - %2")
-			.arg(QApplication::applicationName()).arg(title));
+	messageBox->setWindowTitle(title);
 	messageBox->setText(text);
 	if (!detailedText.isEmpty())
 	{
@@ -44,8 +43,7 @@ void Tools::warning(QWidget *parent, const QString &title, const QString &text,
 	{
 		messageBox->setWindowModality(Qt::WindowModal);
 	}
-	messageBox->setWindowTitle(QString("%1 - %2")
-			.arg(QApplication::applicationName()).arg(title));
+	messageBox->setWindowTitle(title);
 	messageBox->setText(text);
 	if (!detailedText.isEmpty())
 	{
@@ -68,8 +66,7 @@ bool Tools::question(QWidget *parent, const QString &title, const QString &text,
 	{
 		messageBox->setWindowModality(Qt::WindowModal);
 	}
-	messageBox->setWindowTitle(QString("%1 - %2")
-			.arg(QApplication::applicationName()).arg(title));
+	messageBox->setWindowTitle(title);
 	messageBox->setText(text);
 	if (!detailedText.isEmpty())
 	{

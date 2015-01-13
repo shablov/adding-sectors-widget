@@ -15,8 +15,9 @@ class SectorsWidget : public QWidget
 	Q_OBJECT
 public:
 	explicit SectorsWidget(QWidget *parent = 0);
-
 	void setModel(SectorsModel *model);
+
+	QList<Sector> sectors();
 
 signals:
 
@@ -29,6 +30,8 @@ private:
 	GraphicsSectorsWidget *graphicsWidget;
 	TableSectorsWidget *tableWidget;
 	QTabWidget *tabWidget;
+
+	SectorsModel *pModel;
 };
 
 #endif // SECTORSWIDGET_H

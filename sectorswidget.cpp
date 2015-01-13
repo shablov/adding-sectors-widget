@@ -7,12 +7,8 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 
-#include <QMessageBox>
-
-#include <QDebug>
-
 SectorsWidget::SectorsWidget(QWidget *parent) :
-	QWidget(parent), graphicsWidget(0), tableWidget(0)
+	QWidget(parent), graphicsWidget(0), tableWidget(0), pModel(0)
 {
 	QVBoxLayout * mainLayout = new QVBoxLayout(this);
 	tabWidget = new QTabWidget;
@@ -25,19 +21,35 @@ void SectorsWidget::setModel(SectorsModel *model)
 	if (!graphicsWidget)
 	{
 		graphicsWidget = new GraphicsSectorsWidget;
-		graphicsWidget->setModel(model);
-		graphicsWidget->setSuffix(QChar(0x00B0));
 		tabWidget->addTab(graphicsWidget, tr("graphics"));
 	}
+	graphicsWidget->setModel(model);
+	graphicsWidget->setSuffix(QChar(0x00B0));
+
 	if (!tableWidget)
 	{
 		tableWidget = new TableSectorsWidget;
-		tableWidget->setModel(model);
 		tabWidget->addTab(tableWidget, tr("table"));
+	}
+	tableWidget->setModel(model);
+
+	if (pModel)
+	{
+		delete pModel;
+		pModel = model;
 	}
 
 	connect(model, SIGNAL(sectorIntersected(Sector, QList<Sector>)),
 			this, SLOT(onSectorIntersected(Sector, QList<Sector>)));
+}
+
+QList<Sector> SectorsWidget::sectors()
+{
+	if (pModel)
+	{
+		return pModel->sectors();
+	}
+	return QList<Sector>();
 }
 
 void SectorsWidget::onSectorIntersected(Sector newSector, QList<Sector> intersectedSectors)

@@ -19,11 +19,13 @@ SOURCES += main.cpp \
     graphicssectorswidget.cpp \
     sectorsmodel.cpp \
     sectorswidget.cpp \
-    tools.cpp
+    tools.cpp \
+    editsectorwidget.cpp
 
 HEADERS  += \
     tablesectorswidget.h \
     graphicssectorswidget.h \
     sectorsmodel.h \
     sectorswidget.h \
-    tools.h
+    tools.h \
+    editsectorwidget.h

@@ -15,6 +15,8 @@ class QGraphicsEllipseItem;
 
 class QModelIndex;
 
+class QMenu;
+
 class GraphicsSectorsWidget : public QWidget
 {
 	Q_OBJECT
@@ -46,9 +48,13 @@ protected:
 private slots:
 	void onDataChanged(const QModelIndex &, const QModelIndex &);
 
+	void editSector();
+	void removeSector();
+
 private:
 	void setDefaultSettings();
 
+	void createSceneContextMenu();
 	void createGraphics();
 	void createGraphicsScene();
 	void createGraphicsView();
@@ -66,10 +72,12 @@ private:
 	Sector mAddedSector;
 	QGraphicsEllipseItem *pAddedEllipseSector;
 
-	void handleEvent(QEvent *event);
+	void handleMouseEvent(QEvent *event);
+	void sceneContextMenuEvent(QEvent *event);
 	qreal calculateValue(const QPointF &point);
 	bool leftButtonWasPressed();
 	Qt::MouseButton buttonPressed;
+	QMenu *sceneContextMenu;
 
 	QGraphicsView *view;
 	QBrush backgroundBrush;
