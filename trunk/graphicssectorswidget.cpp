@@ -1,24 +1,25 @@
 #include "graphicssectorswidget.h"
+#include "editsectorwidget.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QGraphicsTextItem>
-#include <QVBoxLayout>
 #include <QMenu>
+
+#include <QVBoxLayout>
 
 #include <QEvent>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsSceneContextMenuEvent>
 
 #include <math.h>
-
-#include <QDebug>
-
 
 GraphicsSectorsWidget::GraphicsSectorsWidget(QWidget *parent)
 	: QWidget(parent), padding(40), scalePadding(5),
 	  standardOffset(90), scaleCount(8)
 {
 	setDefaultSettings();
+	createSceneContextMenu();
 	createGraphics();
 	QVBoxLayout *mainLayout = new QVBoxLayout(this);
 	mainLayout->addWidget(view);
@@ -36,6 +37,12 @@ void GraphicsSectorsWidget::setDefaultSettings()
 	mOffset = 0;
 	minimum = 0;
 	maximum = 360;
+}
+void GraphicsSectorsWidget::createSceneContextMenu()
+{
+	sceneContextMenu = new QMenu;
+	sceneContextMenu->addAction(tr("Edit sector"), this, SLOT(editSector()));
+	sceneContextMenu->addAction(tr("Remove sector"), this, SLOT(removeSector()));
 }
 
 void GraphicsSectorsWidget::createGraphics()
@@ -153,6 +160,36 @@ void GraphicsSectorsWidget::onDataChanged(const QModelIndex &/*topLeft*/, const 
 	redraw();
 }
 
+void GraphicsSectorsWidget::editSector()
+{
+	QGraphicsItem *item = scene->focusItem();
+	if (!item)
+	{
+		return;
+	}
+	Sector sector = pModel->sector(item->data(Qt::UserRole).toInt());
+	if (sector.isEmpty())
+	{
+		return;
+	}
+	EditSectorWidget *editSectorWidget = new EditSectorWidget(this);
+	editSectorWidget->setSector(sector);
+	if (editSectorWidget->exec() == QDialog::Accepted)
+	{
+		pModel->appendSector(editSectorWidget->sector());
+	}
+}
+
+void GraphicsSectorsWidget::removeSector()
+{
+	QGraphicsItem *item = scene->focusItem();
+	if (item)
+	{
+		pModel->removeSector(item->data(Qt::UserRole).toInt());
+		redraw();
+	}
+}
+
 
 void GraphicsSectorsWidget::resizeEvent(QResizeEvent *event)
 {
@@ -166,12 +203,16 @@ bool GraphicsSectorsWidget::eventFilter(QObject *obj, QEvent *event)
 		event->type() == QEvent::GraphicsSceneMousePress ||
 		event->type() == QEvent::GraphicsSceneMouseRelease)
 	{
-		handleEvent(event);
+		handleMouseEvent(event);
+	}
+	if (event->type() == QEvent::GraphicsSceneContextMenu)
+	{
+		sceneContextMenuEvent(event);
 	}
 	return QWidget::eventFilter(obj, event);
 }
 
-void GraphicsSectorsWidget::handleEvent(QEvent *event)
+void GraphicsSectorsWidget::handleMouseEvent(QEvent *event)
 {
 	QGraphicsSceneMouseEvent *mouseEvent = dynamic_cast<QGraphicsSceneMouseEvent*>(event);
 	if (!mouseEvent)
@@ -243,6 +284,15 @@ void GraphicsSectorsWidget::saveSectorIfPossible()
 		addSector(Sector(mAddedSector));
 	}
 	mAddedSector = Sector();
+}
+
+void GraphicsSectorsWidget::sceneContextMenuEvent(QEvent *event)
+{
+	QGraphicsSceneContextMenuEvent *sceneContextMenuEvent = dynamic_cast<QGraphicsSceneContextMenuEvent*>(event);
+	if (scene->focusItem() != 0)
+	{
+		sceneContextMenu->exec(sceneContextMenuEvent->screenPos());
+	}
 }
 
 void GraphicsSectorsWidget::addSector(const Sector &sector)
@@ -339,6 +389,7 @@ QGraphicsEllipseItem *GraphicsSectorsWidget::drawSector(const Sector &sector)
 	int spanAngle = fmod(secondAngle - firstAngle + 360, 360) * 16 * mCCW;
 	ellipse->setStartAngle(startAngle);
 	ellipse->setSpanAngle(spanAngle);
+	ellipse->setData(Qt::UserRole, sector.id);
 
 	return ellipse;
 }

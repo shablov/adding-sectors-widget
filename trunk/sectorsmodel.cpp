@@ -167,7 +167,6 @@ bool SectorsModel::insertRows(int row, int count, const QModelIndex &parent)
 		mSectors.append(sector);
 	}
 	endInsertRows();
-	QAbstractItemModel::reset();
 	return true;
 }
 
@@ -179,7 +178,7 @@ bool SectorsModel::removeRows(int row, int count, const QModelIndex &parent)
 		mSectors.removeAt(i);
 	}
 	endRemoveRows();
-	QAbstractItemModel::reset();
+	emit dataChanged(QModelIndex(), QModelIndex());
 	return true;
 }
 
@@ -220,15 +219,65 @@ void SectorsModel::appendSector(const Sector &sector)
 	QList<Sector> intersectedSectors = intersectsSectors(sector);
 	if (intersectedSectors.isEmpty())
 	{
-		insertRow(-1);
-		Sector &last = mSectors.last();
-		last.begin = sector.begin;
-		last.end = sector.end;
-		last.normalize();
+		Sector *last;
+		if (!mSectors.contains(sector))
+		{
+			insertRow(-1);
+			last = &mSectors.last();
+		}
+		else
+		{
+			last = &mSectors[mSectors.indexOf(sector)];
+		}
+		last->begin = sector.begin;
+		last->end = sector.end;
+		last->normalize();
+
 		emit dataChanged(QModelIndex(), QModelIndex());
 		return;
 	}
 	emit sectorIntersected(sector, intersectedSectors);
+}
+
+void SectorsModel::removeSector(const Sector &sector)
+{
+	if (mSectors.contains(sector))
+	{
+		removeRow(mSectors.indexOf(sector));
+	}
+}
+
+void SectorsModel::removeSector(const int &id)
+{
+	Sector desiredSector;
+	desiredSector.id = id;
+	if (mSectors.contains(desiredSector))
+	{
+		removeRow(mSectors.indexOf(desiredSector));
+	}
+}
+
+Sector SectorsModel::sector(const int &id)
+{
+	QListIterator<Sector> i(mSectors);
+	while (i.hasNext())
+	{
+		const Sector &sector = i.next();
+		if (sector.id == id)
+		{
+			return sector;
+		}
+	}
+	return Sector();
+}
+
+Sector SectorsModel::sector(const QModelIndex &index)
+{
+	if (!index.isValid() || isOutRange(index))
+	{
+		return Sector();
+	}
+	return mSectors.at(index.row());
 }
 
 QList<Sector> SectorsModel::sectors()
