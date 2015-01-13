@@ -23,9 +23,11 @@ SOURCES += main.cpp \
     editsectorwidget.cpp
 
 HEADERS  += \
-    tablesectorswidget.h \
-    graphicssectorswidget.h \
-    sectorsmodel.h \
-    sectorswidget.h \
-    tools.h \
-    editsectorwidget.h
+    include/tablesectorswidget.h \
+    include/graphicssectorswidget.h \
+    include/sectorsmodel.h \
+    include/sectorswidget.h \
+    include/tools.h \
+    include/editsectorwidget.h
+
+INCLUDEPATH = include
